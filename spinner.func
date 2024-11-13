@@ -1,0 +1,108 @@
+function spinner() {
+  # 
+  # https://github.com/jorgenuhr/spinner
+  # 
+  # -c | --command = Command to run
+  # -d | --display = [true|false] Show checkbox after command have run (default true)
+  # -s | --show = Animation to show
+  # -t | --text = Text to display
+  local display arg cmd show chars text pid i;
+
+  # check arguments passed to the function
+  for (( i=1;i<=$#;i++ )); do
+    arg=${!i}
+    case $arg in
+      -c | --command)
+        ((i++))
+        cmd=${!i}
+        ;;
+      -d | --display)
+        ((i++))
+        if [[ "${!i}" == "false" ]]; then
+          display="false"
+        else
+          display="true"
+        fi
+        ;;
+      -s | --show)
+        ((i++))
+        show=${!i}
+        ;;
+      -t | --text)
+        ((i++))
+        text=${!i}
+        ;;
+      *)
+        echo "Unknown option \"${arg}\""
+        exit
+        ;;
+    esac
+  done
+
+  # check values and set defaults
+  display="${display:-true}"
+  text="${text:-No value set}"
+
+  # decide which animation to show
+  if [[ "$show" == "1" ]]; then
+    chars=("⠁" "⠂" "⠄" "⡀" "⢀" "⠠" "⠐" "⠈")
+  elif [[ "$show" == "2" ]]; then
+    chars=("-" "\\" "|" "/")
+  elif [[ "$show" == "3" ]]; then
+    chars=("▖" "▘" "▝" "▗")
+  elif [[ "$show" == "4" ]]; then
+    chars=("◐" "◓" "◑" "◒")
+  elif [[ "$show" == "5" ]]; then
+    chars=("┤" "┘" "┴" "└" "├" "┌" "┬" "┐")
+  elif [[ "$show" == "6" ]]; then
+    chars=("▁" "▂" "▃" "▄" "▅" "▆" "▇" "█" "▇" "▆" "▅" "▄" "▃" "▂" "▁")
+  elif [[ "$show" == "7" ]]; then
+    chars=("▉" "▊" "▋" "▌" "▍" "▎" "▏" "▎" "▍" "▌" "▋" "▊" "▉")
+  else
+    chars=("⣾" "⣽" "⣻" "⢿" "⡿" "⣟" "⣯" "⣷")
+  fi
+
+  # checkbox
+  checkbox="✅"
+  errorbox="❌"
+
+  # show text
+  echo -e -n "\n  ${text} "
+
+  # run command in background
+  ($cmd >/dev/null 2>&1) &
+  pid=$!
+  
+  tput civis
+  tput sc
+
+  # show animation
+  while ps -p $pid > /dev/null; do
+    for (( i=0;i<${#chars[@]};i++)); do
+      echo -en "${chars[$i]}"
+      sleep 0.1
+      tput cub 1
+    done
+  done
+
+  # get exid code from the command run in background
+  if [ ! -d "/proc/$pid" ]; then
+    wait $pid
+    rc=$?
+  fi
+
+  tput rc
+  tput el
+  tput cnorm
+
+  # display graph at end
+  if [[ $display == "true" ]]; then
+    if [[ $rc -gt 0 ]]; then
+      echo -n "$errorbox"
+    else
+      echo -n "$checkbox"
+    fi
+  fi 
+
+  return $rc
+}
